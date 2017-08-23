@@ -1,5 +1,16 @@
 #define _CRT_SECURE_NO_WARNINGS
 
+#define _WIN32_WINNT _WIN32_WINNT_WINXP
+/*I just went through OpenProcess API in msdn, it says below for for PROCESS_ALL_ACCESS. 
+I think this was the issue which you were facing.
+Windows Server 2003 and Windows XP/2000:   
+The size of the PROCESS_ALL_ACCESS flag increased on Windows Server 2008 and Windows Vista. 
+If an application compiled for Windows Server 2008 and Windows Vista is run on Windows Server 2003 or Windows XP/2000, 
+the PROCESS_ALL_ACCESS flag is too large and the function specifying this flag fails with ERROR_ACCESS_DENIED. 
+To avoid this problem, specify the minimum set of access rights required for the operation. 
+If PROCESS_ALL_ACCESS must be used, set _WIN32_WINNT to the minimum operating system targeted by your application 
+(for example,#define _WIN32_WINNT _WIN32_WINNT_WINXP). For more information, see Using the Windows Headers .*/
+
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <string>
@@ -39,7 +50,8 @@ int main(void)
 {
 	// 記得要先關防毒		 
 
-	LPCSTR DllPath = "D:\\MIF00-AUTO\\Injector(x86)\\Debug\\TargetDll.dll";
+	//LPCSTR DllPath = "D:\\MIF00-AUTO\\Injector(x86)\\Debug\\TargetDll.dll";
+	LPCSTR DllPath = "C:\\injection\\TargetDll.dll";
 
 	DWORD processID = FindProcessId(L"testApp.exe");
 
@@ -83,7 +95,7 @@ int main(void)
 		return -1;
 	}
 
-	printf("Memory allocation succeeded\n");
+	printf("Memory allocation succeeded, Dll path allocated at %p\n", pDllPath);
 
 	BOOL isSucceeded = WriteProcessMemory(processHandle, pDllPath, (LPVOID)DllPath, strlen(DllPath) + 1, NULL);
 
@@ -96,10 +108,7 @@ int main(void)
 	printf("Argument has been written\n");
 
 
-	//HANDLE threadHandle = CreateRemoteThread(processHandle, NULL, 0, (LPTHREAD_START_ROUTINE)loadLibraryAddress, pDllPath, NULL, 0);
-	// 用OllyDbg也可以看Injector Kerner32.dll LoadLibrary()的位址 = 0x76924977
-	// 因為底層的dll位址都一樣(不同平台可能不同)，所以可以在testApp用LoadLibrary的位址來呼叫被Inject的Dll(TargetDll)
-	HANDLE threadHandle = CreateRemoteThread(processHandle, NULL, 0, (LPTHREAD_START_ROUTINE)0x76924977, pDllPath, NULL, 0);
+	HANDLE threadHandle = CreateRemoteThread(processHandle, NULL, 0, (LPTHREAD_START_ROUTINE)loadLibraryAddress, pDllPath, NULL, 0);
 
 	if (threadHandle != NULL)
 	{
@@ -107,8 +116,6 @@ int main(void)
 	}
 
 	WaitForSingleObject(threadHandle, INFINITE);
-
-	printf("Dll path allocated at: %p", pDllPath);	
 
 	getchar();
 
